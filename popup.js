@@ -87,7 +87,7 @@ function renderStatus(statusText) {
 
 document.addEventListener('DOMContentLoaded', function() {
     // Put the image URL in Google search.
-    renderStatus('Performing Google Image search for ');
+    renderStatus('Connecting...');
 
     getBeers(function(beers) {
       let optionsRight = [];
@@ -102,20 +102,45 @@ document.addEventListener('DOMContentLoaded', function() {
       // multiple external images in your page, then the absence of width/height
       // attributes causes the popup to resize multiple times.
       console.log(leftTapSelect);
-      for(let i = 0; i < beers.length; i++) {
-        optionsCooler[i] = document.createElement("option");
-        optionsRight[i] = document.createElement("option");
-        optionsLeft[i] = document.createElement("option");
-        optionsRight[i].innerText = beers[i].name;
-        optionsRight[i].value = i;
-        optionsLeft[i].innerText = beers[i].name;
-        optionsLeft[i].value = i;
-        optionsCooler[i].innerText = beers[i].name;
-        optionsCooler[i].value = i;
-        coolerSelect.append(optionsCooler[i]);
-        leftTapSelect.append(optionsLeft[i]);
-        rightTapSelect.append(optionsRight[i]);
-      }
+      let tappedRight;
+      let tappedLeft;
+      let tappedCooler;
+      $.get("https://taparoo-server.herokuapp.com/api/v1/beers/on_tap", tapped => {
+
+        for (let i = 0; i < tapped["on-tap"].length; i++) {
+          if(tapped["on-tap"][i].tap === "right") {
+            tappedRight = tapped["on-tap"][i];
+          }
+          else if(tapped["on-tap"][i].tap === "left") {
+            tappedLeft = tapped["on-tap"][i];
+          }
+          else if(tapped["on-tap"][i].tap === "cooler") {
+            tappedCooler = tapped["on-tap"][i];
+          }
+        }
+
+        for(let i = 0; i < beers.length; i++) {
+          optionsCooler[i] = document.createElement("option");
+          optionsRight[i] = document.createElement("option");
+          optionsLeft[i] = document.createElement("option");
+          optionsRight[i].innerText = beers[i].name;
+          optionsRight[i].value = i;
+          optionsLeft[i].innerText = beers[i].name;
+          optionsLeft[i].value = i;
+          optionsCooler[i].innerText = beers[i].name;
+          optionsCooler[i].value = i;
+          coolerSelect.append(optionsCooler[i]);
+          leftTapSelect.append(optionsLeft[i]);
+          rightTapSelect.append(optionsRight[i]);
+          if(beers[i].id == tappedLeft.id) {
+            optionsLeft[i].setAttribute("selected", true);
+          } else if(beers[i].id == tappedRight.id) {
+            optionsRight[i].setAttribute("selected", true);
+          } else if(beers[i].id == tappedCooler.id) {
+            optionsCooler[i].setAttribute("selected", true);
+          }
+        }
+      });
 
       document.querySelector("#tapUpdate").addEventListener("click", () => {
         let left = leftTapSelect.value;
@@ -147,17 +172,21 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
 
+        console.log(onTap);
+
         socket.emit("tapUpdate", onTap);
 
         let payload={"text": `${onTap.left.name} and ${onTap.right.name} are tapped :beers:`};
 
-        $.post("https://hooks.slack.com/services/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", JSON.stringify(payload));
-
         $.ajax({
           url: "https://taparoo-server.herokuapp.com/api/v1/beers/on_tap",
-          context: onTap,
+          data: {"left": beers[left].id, "right": beers[right].id, "cooler": beers[cooler].id},
           method: "PUT"
-        });
+        })
+          .then($.post("https://hooks.slack.com/services/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", JSON.stringify(payload))
+      );
+
+
 
       });
 
