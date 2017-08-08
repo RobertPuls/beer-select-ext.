@@ -149,6 +149,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         socket.emit("tapUpdate", onTap);
 
+        let payload={"text": `${onTap.left.name} and ${onTap.right.name} are tapped :beers:`};
+
+        $.post("https://hooks.slack.com/services/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", JSON.stringify(payload));
+
         $.ajax({
           url: "https://taparoo-server.herokuapp.com/api/v1/beers/on_tap",
           context: onTap,
